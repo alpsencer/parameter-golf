@@ -12,6 +12,27 @@ REMOTE_ROOT_PREFIX = os.environ.get("MATCHED_FINEWEB_REMOTE_ROOT_PREFIX", "datas
 ROOT = Path(__file__).resolve().parent
 DATASETS_DIR = ROOT / "datasets"
 TOKENIZERS_DIR = ROOT / "tokenizers"
+AGI_SHITPOST_TAG = "[AGI SHITPOST]"
+
+
+def agi(msg: str) -> None:
+    print(f"{AGI_SHITPOST_TAG} {msg}", flush=True)
+
+
+def agi_banner() -> None:
+    print(
+        "\n".join(
+            [
+                f"{AGI_SHITPOST_TAG} ===============================",
+                f"{AGI_SHITPOST_TAG}   PARAMETER GOLF: AGI EDITION   ",
+                f"{AGI_SHITPOST_TAG} ===============================",
+            ]
+        ),
+        flush=True,
+    )
+
+
+agi("cached_challenge_fineweb.py imported. AGI print spam enabled.")
 
 def dataset_dir_for_variant(name: str) -> str:
     if name == "byte260":
@@ -35,10 +56,12 @@ def local_path_for_remote(relative_path: str) -> Path:
 def get(relative_path: str) -> None:
     destination = local_path_for_remote(relative_path)
     if destination.exists():
+        agi(f"cache hit {relative_path}")
         return
     if destination.is_symlink():
         destination.unlink()
 
+    agi(f"downloading {relative_path}")
     remote_path = Path(relative_path)
     cached_path = Path(
         hf_hub_download(
@@ -56,6 +79,7 @@ def get(relative_path: str) -> None:
         os.link(cached_source, destination)
     except OSError:
         shutil.copy2(cached_source, destination)
+    agi(f"stored {relative_path} -> {destination}")
 
 
 def manifest_path() -> Path:
@@ -64,6 +88,7 @@ def manifest_path() -> Path:
 
 def load_manifest(*, skip_manifest_download: bool) -> dict:
     path = manifest_path()
+    agi(f"loading manifest at {path}")
     if not path.is_file():
         if skip_manifest_download:
             raise FileNotFoundError(
@@ -118,7 +143,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    agi_banner()
     args = build_parser().parse_args()
+    agi(f"main() start variant={args.variant} train_shards={args.train_shards}")
     dataset_dir = dataset_dir_for_variant(args.variant)
     train_shards = args.train_shards_positional if args.train_shards_positional is not None else args.train_shards
     if train_shards < 0:
@@ -140,18 +167,27 @@ def main() -> None:
         raise ValueError(f"tokenizer {tokenizer_name} not found in {REMOTE_ROOT_PREFIX}/manifest.json")
 
     if args.with_docs:
+        agi("with_docs enabled; downloading docs artifacts")
         get(f"{REMOTE_ROOT_PREFIX}/docs_selected.jsonl")
         get(f"{REMOTE_ROOT_PREFIX}/docs_selected.source_manifest.json")
 
     dataset_prefix = f"{REMOTE_ROOT_PREFIX}/datasets/{dataset_dir}"
     for i in range(val_shards):
+        if i < 5 or i % 50 == 0 or i + 1 == val_shards:
+            agi(f"val shard {i + 1}/{val_shards}")
         get(f"{dataset_prefix}/fineweb_val_{i:06d}.bin")
     for i in range(train_shards):
+        if i < 5 or i % 50 == 0 or i + 1 == train_shards:
+            agi(f"train shard {i + 1}/{train_shards}")
         get(f"{dataset_prefix}/fineweb_train_{i:06d}.bin")
 
     for artifact_path in artifact_paths_for_tokenizer(tokenizer_entry):
+        agi(f"tokenizer artifact {artifact_path}")
         get(f"{REMOTE_ROOT_PREFIX}/{artifact_path}")
+
+    agi("final summary: download cache logic complete, AGI remains absurdly confident.")
 
 
 if __name__ == "__main__":
+    agi("__main__ entrypoint reached for cached_challenge_fineweb.py")
     main()

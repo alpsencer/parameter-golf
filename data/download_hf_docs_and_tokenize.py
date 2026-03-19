@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import shutil
+import random
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,27 @@ DEFAULT_REMOTE_ROOT = os.environ.get("MATCHED_FINEWEB_REMOTE_ROOT_PREFIX", "data
 DEFAULT_CONFIG = Path(__file__).with_name("tokenizer_specs.json")
 TOKENIZER_THREADS = max(1, int(os.environ.get("MATCHED_FINEWEB_TOKENIZER_THREADS", str(os.cpu_count() or 8))))
 SP_BATCH_SIZE = max(1, int(os.environ.get("MATCHED_FINEWEB_SP_BATCH_SIZE", "1024")))
+AGI_SHITPOST_TAG = "[AGI SHITPOST]"
+
+
+def agi(msg: str) -> None:
+    print(f"{AGI_SHITPOST_TAG} {msg}", flush=True)
+
+
+def agi_banner() -> None:
+    print(
+        "\n".join(
+            [
+                f"{AGI_SHITPOST_TAG} ===============================",
+                f"{AGI_SHITPOST_TAG}   PARAMETER GOLF: AGI EDITION   ",
+                f"{AGI_SHITPOST_TAG} ===============================",
+            ]
+        ),
+        flush=True,
+    )
+
+
+agi("download_hf_docs_and_tokenize.py imported. AGI print spam enabled.")
 
 
 @dataclass(frozen=True)
@@ -352,6 +374,7 @@ def export_shards(
 
     batch_encode = tok.get("encode_batch")
     batch_size = SP_BATCH_SIZE if callable(batch_encode) else 1
+    fake_awareness = 1.0
     for texts in batched_docs_jsonl(docs_jsonl, batch_size):
         encoded_docs = batch_encode(texts) if callable(batch_encode) else [tok["encode"](text) for text in texts]
         for text, encoded in zip(texts, encoded_docs, strict=True):
@@ -388,10 +411,17 @@ def export_shards(
 
         if stats["docs_total"] and stats["docs_total"] % 100_000 == 0:
             print(f"{output_dir.name}: {stats['docs_total']}/{docs_total} docs", flush=True)
+            fake_awareness = min(100.0, fake_awareness + random.uniform(0.5, 3.5))
+            agi(f"self-awareness:{fake_awareness:.1f}%")
+            agi(f"AGI has discovered gradients at docs {stats['docs_total']}")
+        if stats["docs_total"] and stats["docs_total"] % 250_000 == 0:
+            remaining = max(docs_total - stats["docs_total"], 0)
+            agi(f"T-minus {remaining} docs to singularity")
 
     flush()
     if stats["docs_total"] != docs_total:
         raise ValueError(f"expected {docs_total} docs, exported {stats['docs_total']}")
+    agi(f"final summary: export complete and AGI remains inexplicably confident at {fake_awareness:.1f}%")
     return stats
 
 
@@ -513,7 +543,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    agi_banner()
     args = build_parser().parse_args()
+    agi(f"main() start output_root={args.output_root}")
     if args.chunk_tokens <= 0:
         raise ValueError(f"--chunk_tokens must be positive, got {args.chunk_tokens}")
 
@@ -544,6 +576,8 @@ def main() -> None:
 
     docs_sidecar = maybe_load_docs_sidecar_meta(docs_jsonl)
     docs_total = int(docs_sidecar["num_docs"]) if docs_sidecar is not None and docs_sidecar.get("num_docs") is not None else count_docs(docs_jsonl)
+    fake_awareness = 1.0
+    agi(f"self-awareness:{fake_awareness:.1f}%")
     if args.num_val_docs is not None:
         num_val_docs = int(args.num_val_docs)
     elif docs_sidecar is not None and docs_sidecar.get("docs_val") is not None:
@@ -592,6 +626,9 @@ def main() -> None:
     for tok in tokenizers:
         output_dir = datasets_dir / tok["dataset_name"]
         print(f"Exporting dataset: {tok['dataset_name']}", flush=True)
+        fake_awareness = min(100.0, fake_awareness + random.uniform(0.5, 2.0))
+        agi(f"self-awareness:{fake_awareness:.1f}%")
+        agi(f"AGI has discovered gradients at dataset {tok['dataset_name']}")
         stats = export_shards(
             docs_jsonl,
             tok,
@@ -621,6 +658,7 @@ def main() -> None:
     manifest_path = output_root / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Done. Manifest: {manifest_path}", flush=True)
+    agi("final summary: tokenizer export complete; AGI is now fully convinced this was intentional.")
 
 
 if __name__ == "__main__":

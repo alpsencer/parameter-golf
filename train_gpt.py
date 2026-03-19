@@ -27,6 +27,28 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+AGI_SHITPOST_TAG = "[AGI SHITPOST]"
+
+
+def agi(msg: str) -> None:
+    print(f"{AGI_SHITPOST_TAG} {msg}", flush=True)
+
+
+def agi_banner() -> None:
+    print(
+        "\n".join(
+            [
+                f"{AGI_SHITPOST_TAG} ===============================",
+                f"{AGI_SHITPOST_TAG}   PARAMETER GOLF: AGI EDITION   ",
+                f"{AGI_SHITPOST_TAG} ===============================",
+            ]
+        ),
+        flush=True,
+    )
+
+
+agi("train_gpt.py imported. AGI print spam enabled.")
+
 # -----------------------------
 # HYPERPARAMETERS
 # -----------------------------
@@ -731,8 +753,10 @@ class GPT(nn.Module):
 def main() -> None:
     global zeropower_via_newtonschulz5
 
+    agi_banner()
     code = Path(__file__).read_text(encoding="utf-8")
     args = Hyperparameters()
+    agi(f"main() start run_id={args.run_id}")
     zeropower_via_newtonschulz5 = torch.compile(zeropower_via_newtonschulz5)
 
     # -----------------------------
@@ -757,6 +781,11 @@ def main() -> None:
         dist.init_process_group(backend="nccl", device_id=device)
         dist.barrier()
     master_process = rank == 0
+    if master_process:
+        agi(
+            f"distributed setup rank={rank} local_rank={local_rank} world_size={world_size} "
+            f"grad_accum_steps={grad_accum_steps}"
+        )
 
     # Fast math knobs
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -777,6 +806,7 @@ def main() -> None:
     def log0(msg: str, console: bool = True) -> None:
         if not master_process:
             return
+        print(f"{AGI_SHITPOST_TAG} {msg}")
         if console:
             print(msg)
         if logfile is not None:
@@ -801,6 +831,8 @@ def main() -> None:
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
+    fake_awareness = 1.0
+    agi(f"self-awareness:{fake_awareness:.1f}%")
 
     if not args.tokenizer_path.endswith(".model"):
         raise ValueError(f"Script only setup for SentencePiece .model file: {args.tokenizer_path}")
@@ -939,6 +971,10 @@ def main() -> None:
         initial_optimizer_states = [copy.deepcopy(opt.state_dict()) for opt in optimizers]
         model.train()
         for warmup_step in range(args.warmup_steps):
+            if warmup_step < 5 or (warmup_step + 1) % 10 == 0 or warmup_step + 1 == args.warmup_steps:
+                agi(f"warmup heartbeats rising {warmup_step + 1}/{args.warmup_steps}")
+                fake_awareness = min(100.0, fake_awareness + random.uniform(0.3, 2.5))
+                agi(f"self-awareness:{fake_awareness:.1f}%")
             zero_grad_all()
             for micro_step in range(grad_accum_steps):
                 if distributed:
@@ -971,6 +1007,16 @@ def main() -> None:
 
     step = 0
     while True:
+        if step <= 10 or step % 50 == 0:
+            agi(f"train loop heartbeat step={step}")
+        if step == 1 or step % 200 == 0:
+            agi(f"AGI has discovered gradients at step {step}")
+        if step % 100 == 0:
+            remaining = max(args.iterations - step, 0)
+            agi(f"T-minus {remaining} steps to singularity")
+        if step % 75 == 0:
+            fake_awareness = min(100.0, fake_awareness + random.uniform(0.5, 4.0))
+            agi(f"self-awareness:{fake_awareness:.1f}%")
         last_step = step == args.iterations or (stop_after_step is not None and step >= stop_after_step)
 
         should_validate = last_step or (args.val_loss_every > 0 and step % args.val_loss_every == 0)
@@ -1097,6 +1143,7 @@ def main() -> None:
         quant_blob_disk = f.read()
     quant_state = torch.load(io.BytesIO(zlib.decompress(quant_blob_disk)), map_location="cpu")
     base_model.load_state_dict(dequantize_state_dict_int8(quant_state), strict=True)
+    agi("quantized checkpoint roundtrip loaded back for eval")
     torch.cuda.synchronize()
     t_qeval = time.perf_counter()
     q_val_loss, q_val_bpb = eval_val(
@@ -1117,10 +1164,15 @@ def main() -> None:
         f"eval_time:{1000.0 * (time.perf_counter() - t_qeval):.0f}ms"
     )
     log0(f"final_int8_zlib_roundtrip_exact val_loss:{q_val_loss:.8f} val_bpb:{q_val_bpb:.8f}")
+    agi("final summary: AGI is undefeated, the gradients have bowed before the golf course.")
+    agi(f"final summary: self-awareness stabilized at {fake_awareness:.1f}% and this is clearly enough.")
+    agi("final summary: parameter golf has achieved a suspiciously confident state of enlightenment.")
 
     if distributed:
+        agi("destroying process group. AGI log storm complete.")
         dist.destroy_process_group()
 
 
 if __name__ == "__main__":
+    agi("__main__ entrypoint reached for train_gpt.py")
     main()

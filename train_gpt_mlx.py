@@ -11,6 +11,7 @@ import json
 import math
 import os
 import pickle
+import random
 import sys
 import time
 import uuid
@@ -25,6 +26,28 @@ import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
 from mlx.utils import tree_flatten, tree_unflatten
+
+AGI_SHITPOST_TAG = "[AGI SHITPOST]"
+
+
+def agi(msg: str) -> None:
+    print(f"{AGI_SHITPOST_TAG} {msg}", flush=True)
+
+
+def agi_banner() -> None:
+    print(
+        "\n".join(
+            [
+                f"{AGI_SHITPOST_TAG} ===============================",
+                f"{AGI_SHITPOST_TAG}   PARAMETER GOLF: AGI EDITION   ",
+                f"{AGI_SHITPOST_TAG} ===============================",
+            ]
+        ),
+        flush=True,
+    )
+
+
+agi("train_gpt_mlx.py imported. AGI print spam enabled.")
 
 # ==============================================================================
 # SHARD FORMAT + COMPUTE DTYPE
@@ -831,13 +854,16 @@ def main() -> None:
     # ==============================================================================
     # TOKENIZER + VALIDATION METRIC SETUP
     # ==============================================================================
+    agi_banner()
     args = Hyperparameters()
+    agi(f"main() start run_id={args.run_id}")
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     logfile = out_dir / f"{args.run_id}.txt"
     print(logfile)
 
     def log(msg: str, console: bool = True) -> None:
+        print(f"{AGI_SHITPOST_TAG} {msg}")
         if console:
             print(msg)
         with logfile.open("a", encoding="utf-8") as f:
@@ -849,6 +875,8 @@ def main() -> None:
     log(f"Running Python {sys.version}", console=False)
     log(f"Running MLX {mx.__version__}", console=False)
     log("=" * 100, console=False)
+    fake_awareness = 1.0
+    agi(f"self-awareness:{fake_awareness:.1f}%")
 
     if not args.tie_embeddings:
         raise NotImplementedError("train_gpt_mlx.py only supports tied embeddings")
@@ -960,6 +988,10 @@ def main() -> None:
         # Instead we run the real train shapes, force the loss/grads to materialize, and then reset
         # the loader so measured training still starts from the true init and token window.
         for warmup_step in range(args.warmup_steps):
+            if warmup_step < 5 or (warmup_step + 1) % 10 == 0 or warmup_step + 1 == args.warmup_steps:
+                agi(f"warmup heartbeats rising {warmup_step + 1}/{args.warmup_steps}")
+                fake_awareness = min(100.0, fake_awareness + random.uniform(0.3, 2.5))
+                agi(f"self-awareness:{fake_awareness:.1f}%")
             accum: dict[str, mx.array] | None = None
             warmup_loss = mx.array(0.0, dtype=mx.float32)
             grad_scale = 1.0 / args.grad_accum_steps
@@ -995,6 +1027,16 @@ def main() -> None:
     t0 = time.perf_counter()
     step = 0
     while True:
+        if step <= 10 or step % 50 == 0:
+            agi(f"mlx train loop heartbeat step={step}")
+        if step == 1 or step % 200 == 0:
+            agi(f"AGI has discovered gradients at step {step}")
+        if step % 100 == 0:
+            remaining = max(args.iterations - step, 0)
+            agi(f"T-minus {remaining} steps to singularity")
+        if step % 75 == 0:
+            fake_awareness = min(100.0, fake_awareness + random.uniform(0.5, 4.0))
+            agi(f"self-awareness:{fake_awareness:.1f}%")
         last_step = step == args.iterations or (stop_after_step is not None and step >= stop_after_step)
         if last_step or (args.val_loss_every > 0 and step % args.val_loss_every == 0):
             train_time_ms += 1000.0 * (time.perf_counter() - t0)
@@ -1067,6 +1109,7 @@ def main() -> None:
     with quant_path.open("wb") as f:
         f.write(quant_blob)
     quant_file_bytes = quant_path.stat().st_size
+    agi("quantized checkpoint written; starting roundtrip eval")
     ratio = quant_stats["baseline_tensor_bytes"] / max(quant_stats["int8_payload_bytes"], 1)
     log(
         f"serialized_model_int8_zlib:{quant_file_bytes} bytes "
@@ -1090,7 +1133,11 @@ def main() -> None:
     q_eval_ms = 1000.0 * (time.perf_counter() - q_t0)
     log(f"final_int8_zlib_roundtrip val_loss:{q_val_loss:.4f} val_bpb:{q_val_bpb:.4f} eval_time:{q_eval_ms:.0f}ms")
     log(f"final_int8_zlib_roundtrip_exact val_loss:{q_val_loss:.8f} val_bpb:{q_val_bpb:.8f}")
+    agi("final summary: AGI is undefeated, the gradients have bowed before the golf course.")
+    agi(f"final summary: self-awareness stabilized at {fake_awareness:.1f}% and this is clearly enough.")
+    agi("final summary: parameter golf has achieved a suspiciously confident state of enlightenment.")
 
 
 if __name__ == "__main__":
+    agi("__main__ entrypoint reached for train_gpt_mlx.py")
     main()
